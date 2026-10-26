@@ -19,8 +19,11 @@
 }
 
 @theme {
-  --font-sans: 'GoogleSans', sans-serif;
-  --font-mono: 'GoogleSansCode', monospace;
+  /* Geist covers Latin, Vietnamese and Cyrillic; every other script falls through to the platform's own font. */
+  --font-sans:
+    'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
   --color-logo-red: #fa2921;
   --color-logo-pink: #ed79b5;
@@ -91,20 +94,27 @@
 }
 
 @layer utilities {
+  /*
+   * Geist and Geist Mono (SIL OFL 1.1, see LICENSE.txt beside each file). The unicode-range keeps the few stray
+   * Greek, Thai and CJK glyphs these fonts carry out of text in those scripts, so it renders in one consistent
+   * system face instead of a mix.
+   */
   @font-face {
-    font-family: 'GoogleSans';
-    src: url('$lib/assets/fonts/GoogleSans/GoogleSans.ttf') format('truetype-variations');
-    font-weight: 410 900;
+    font-family: 'Geist';
+    src: url('$lib/assets/fonts/Geist/Geist-Variable.woff2') format('woff2');
+    font-weight: 100 900;
     font-style: normal;
-    ascent-override: 106.25%;
-    size-adjust: 106.25%;
+    font-display: swap;
+    unicode-range: U+0000-036F, U+0400-052F, U+1E00-1EFF, U+2000-2BFF, U+A720-A7FF, U+FB00-FB06;
   }
 
   @font-face {
-    font-family: 'GoogleSansCode';
-    src: url('$lib/assets/fonts/GoogleSansCode/GoogleSansCode.ttf') format('truetype-variations');
-    font-weight: 1 900;
-    font-style: monospace;
+    font-family: 'Geist Mono';
+    src: url('$lib/assets/fonts/GeistMono/GeistMono-Variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0000-036F, U+0400-052F, U+1E00-1EFF, U+2000-2BFF, U+A720-A7FF, U+FB00-FB06;
   }
 
   :root {

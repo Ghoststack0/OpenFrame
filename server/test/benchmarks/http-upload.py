@@ -21,10 +21,14 @@ IMAGES = {
     'upstream': 'ghcr.io/immich-app/immich-server:v3.3.5',
     'candidate': 'openframe-bench:20261026',
 }
+MEDIA_READY = '--media-ready' in sys.argv
 CONTROLLED = '--controlled' in sys.argv
-ROUNDS = 6 if CONTROLLED else 3
-UPLOADS = 21 if CONTROLLED else 6
-OUTPUT = 'http-upload-controlled.json' if CONTROLLED else 'http-upload-result.json'
+assert not (MEDIA_READY and CONTROLLED)
+ROUNDS = 6 if CONTROLLED or MEDIA_READY else 3
+UPLOADS = 21 if CONTROLLED or MEDIA_READY else 6
+OUTPUT = 'http-upload-media-ready.json' if MEDIA_READY else ('http-upload-controlled.json' if CONTROLLED else 'http-upload-result.json')
+if MEDIA_READY:
+    assert 'BENCH_WORKERS_INCLUDE' not in os.environ, 'Default workers required'
 if CONTROLLED:
     os.environ['BENCH_WORKERS_INCLUDE'] = 'api'
 PORT = 2297
@@ -76,7 +80,7 @@ def upload_body(image, name):
 
 
 # Generate each variant's identical bytes before timing or server startup.
-fixtures = {(round_, index): png(round_ * (UPLOADS if CONTROLLED else 10) + index) for round_ in range(ROUNDS) for index in range(UPLOADS)}
+fixtures = {(round_, index): png(round_ * (UPLOADS if CONTROLLED or MEDIA_READY else 10) + index) for round_ in range(ROUNDS) for index in range(UPLOADS)}
 image_metadata = {version: json.loads(subprocess.check_output(['docker', 'image', 'inspect', image], text=True))[0]
                   for version, image in IMAGES.items()}
 # Resolve mutable tags once, then use exact local image IDs for every deployment.
@@ -92,6 +96,8 @@ result = {
     'behaviorStatus': 'running',
     'performanceGate': 'not_evaluated',
     'controlled': CONTROLLED,
+    'mediaReady': MEDIA_READY,
+    'predeclaredGate': {'pairs': 6, 'uploadsPerDeployment': 20, 'budgetPercent': 5, 'metrics': ['elapsedMs', 'mediaReadyMs'], 'method': 'Geometric mean of paired deployment medians; 10000 whole-block bootstrap draws seed 0, exploratory 95% interval. Regression if lower bound >5%; budget met if upper bound <=5%; otherwise inconclusive. Both metrics must meet budget. No added samples after results.'} if MEDIA_READY else None,
     'workload': {'rounds': ROUNDS, 'warmupUploadsPerRound': 1, 'measuredUploadsPerRound': UPLOADS - 1,
                  'workersInclude': os.environ.get('BENCH_WORKERS_INCLUDE', 'api,microservices'),
                  'fixture': '512x512 RGB seeded random PNG, different bytes each round/index, identical between versions',
@@ -108,6 +114,8 @@ try:
     for round_ in range(ROUNDS):
         order = ['upstream', 'candidate'] if round_ % 2 == 0 else ['candidate', 'upstream']
         for version in order:
+            if MEDIA_READY:
+                compose(version, 'down', '-v', '--remove-orphans')
             started = time.perf_counter()
             compose(version, 'up', '-d', '--pull', 'never')
             for attempt in range(180):
@@ -120,7 +128,17 @@ try:
             else:
                 raise RuntimeError(f'{version} did not become ready within 180 checks')
             startup_ms = (time.perf_counter() - started) * 1000
-            if round_ == 0:
+            readiness = {}
+            if MEDIA_READY:
+                for attempt in range(600):
+                    logs = compose(version, 'logs', '--no-color', 'server', capture=True)
+                    if 'Geodata import completed' in logs:
+                        break
+                    time.sleep(1)
+                else:
+                    raise RuntimeError('Geodata startup did not finish within 600 checks')
+                readiness['geodataReadyMs'] = (time.perf_counter() - started) * 1000
+            if round_ == 0 or MEDIA_READY:
                 post('/auth/admin-sign-up', CREDENTIALS)
             login, _ = post('/auth/login', {key: CREDENTIALS[key] for key in ('email', 'password')})
             assert login['isAdmin'] is True
@@ -129,10 +147,26 @@ try:
             for index in range(UPLOADS):
                 image = fixtures[round_, index]
                 body, boundary = upload_body(image, f'fixture-{round_}-{index}')
+                upload_started = time.perf_counter()
                 status, _, response, elapsed = request('/assets', body, {**headers, 'Content-Type': 'multipart/form-data; boundary=' + boundary})
                 assert status == 201, ('new upload', version, status, response[:500])
                 asset = json.loads(response)
                 assert asset['status'] == 'created', asset
+                media_ready_ms = None
+                if MEDIA_READY:
+                    for attempt in range(1200):
+                        ready = []
+                        for size in ('thumbnail', 'preview'):
+                            code, media_headers, media, _ = request('/assets/' + asset['id'] + '/thumbnail?size=' + size, headers=headers)
+                            ready.append(code == 200 and media_headers.get('Content-Type', '').startswith('image/') and len(media) > 100)
+                        if all(ready):
+                            break
+                        time.sleep(0.05)
+                    else:
+                        raise RuntimeError('Thumbnail/preview readiness timeout')
+                    media_ready_ms = (time.perf_counter() - upload_started) * 1000
+                    if index == 0:
+                        readiness['warmupMediaReadyMs'] = media_ready_ms
                 path = '/assets/' + asset['id'] + '/original'
                 status, response_headers, original, _ = request(path, headers=headers)
                 assert status == 200 and original == image, ('stored bytes differ', version)
@@ -143,6 +177,7 @@ try:
                 assert status == 304 and not cached
                 if index:
                     samples.append({'index': index, 'bytes': len(image), 'elapsedMs': elapsed,
+                                    'mediaReadyMs': media_ready_ms,
                                     'MiBPerSecond': len(image) / 1048576 / (elapsed / 1000)})
             digest = hashlib.sha1(image).digest()
             checksum = base64.b64encode(digest).decode()
@@ -165,10 +200,14 @@ try:
             database = compose(version, 'exec', '-T', 'database', 'psql', '-U', 'postgres', '-d', 'immich', '-Atc',
                                "select json_build_object('version',version(),'fsync',current_setting('fsync'),'full_page_writes',current_setting('full_page_writes'),'synchronous_commit',current_setting('synchronous_commit'))", capture=True)
             result['rounds'].append({'round': round_, 'version': version, 'startupMs': startup_ms,
-                                     'database': json.loads(database), 'uploadSamples': samples,
+                                     'database': json.loads(database), 'readiness': readiness, 'uploadSamples': samples,
                                      'bulkCheckSamplesMs': bulk_samples, 'behavior': 'upload/download bytes, unauthorized=401, range=206, ETag=304, duplicate upload identity, mixed preflight output passed'})
             Path(OUTPUT).write_text(json.dumps(result, indent=2) + '\n')
-            compose(version, 'stop')
+            if MEDIA_READY:
+                Path(f'media-ready-{round_}-{version}.log').write_text(compose(version, 'logs', '--no-color', capture=True))
+                compose(version, 'down', '-v', '--remove-orphans')
+            else:
+                compose(version, 'stop')
     result['summary'] = {version: {
         'uploadMedianMs': statistics.median(sample['elapsedMs'] for row in result['rounds'] if row['version'] == version for sample in row['uploadSamples']),
         'bulkCheckMedianMs': statistics.median(sample for row in result['rounds'] if row['version'] == version for sample in row['bulkCheckSamplesMs']),
@@ -187,5 +226,5 @@ except BaseException as error:
 finally:
     for version in IMAGES:
         logs = compose(version, 'logs', '--no-color', '--tail', '100', capture=True)
-        Path(f'http-{version}.log').write_text(logs)
+        Path(f'http-media-ready-{version}.log' if MEDIA_READY else f'http-{version}.log').write_text(logs)
         compose(version, 'down', '-v', '--remove-orphans')

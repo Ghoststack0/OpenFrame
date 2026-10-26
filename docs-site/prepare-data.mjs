@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RESULTS = path.resolve(HERE, '../server/test/benchmarks/results');
@@ -57,7 +58,14 @@ const upload = read('upload-check-linux-summary');
 const uploadRuns = upload.runFiles.map((name) => read(name.replace(/\.json$/, '')));
 const httpSmoke = read('http-upload-linux');
 const httpControlled = read('http-upload-linux-controlled');
-for (const run of [httpSmoke, httpControlled]) {
+const httpMedia = read('http-upload-media-ready');
+const fonts = JSON.parse(fs.readFileSync(path.join(HERE, 'font-payload.json'), 'utf8'));
+for (const font of fonts.after) {
+  const data = fs.readFileSync(path.resolve(HERE, '..', font.path));
+  assert.equal(data.length, font.bytes);
+  assert.equal(createHash('sha256').update(data).digest('hex'), font.sha256);
+}
+for (const run of [httpSmoke, httpControlled, httpMedia]) {
   assert.equal(run.behaviorStatus, 'passed');
   assert.equal(run.baselineRelease.commit, upload.baselineRelease.commit);
   for (const version of ['upstream', 'candidate']) {
@@ -73,6 +81,21 @@ assert.equal(httpControlled.workload.rounds, 6);
 assert.equal(httpControlled.workload.workersInclude, 'api');
 assert.equal(httpSmoke.performanceGate.status, 'inconclusive');
 const paired = httpControlled.performanceGate;
+for (const [metric, analysis] of Object.entries(httpMedia.performanceGate.metrics)) {
+  const pairs = analysis.pairedDeploymentMediansMs;
+  for (const pair of pairs) {
+    for (const version of ['upstream', 'candidate']) {
+      const row = httpMedia.rounds.find((row) => row.round === pair.round && row.version === version);
+      near(pair[version], median(row.uploadSamples.map((sample) => sample[metric])), 'default-worker paired median');
+    }
+  }
+  near(analysis.geometricMeanIncreasePercent, 100 * Math.expm1(pairs.reduce((sum, row) => sum + Math.log(row.candidate / row.upstream), 0) / pairs.length), 'default-worker paired estimate');
+  assert.ok(analysis.exploratory95PercentBlockBootstrapInterval[1] < 0, 'strict zero-slowdown reference');
+}
+assert.equal(httpMedia.mediaReady, true);
+assert.equal(httpMedia.controlled, false);
+assert.equal(httpMedia.workload.rounds, 6);
+assert.equal(httpMedia.workload.workersInclude, 'api,microservices');
 assert.ok(paired.pairedBlocks.every((row) => row.candidateMedianMs < row.upstreamMedianMs));
 near(paired.geometricMeanIncreasePercent, 100 * Math.expm1(paired.pairedBlocks.reduce((sum, row) => sum + Math.log(row.candidateMedianMs / row.upstreamMedianMs), 0) / paired.pairedBlocks.length), 'HTTP paired estimate');
 assert.equal(uploadRuns.length, 3);
@@ -181,6 +204,8 @@ const raw = {
   'upload-check-linux-summary': upload,
   'http-upload-linux': httpSmoke,
   'http-upload-linux-controlled': httpControlled,
+  'http-upload-media-ready': httpMedia,
+  'font-payload': fonts,
   ...Object.fromEntries(upload.runFiles.map((name, index) => [name.replace(/\.json$/, ''), uploadRuns[index]])),
 };
 fs.rmSync(RAW, { recursive: true, force: true });
@@ -283,25 +308,33 @@ fs.writeFileSync(path.join(SRC, 'release-comparison.html'), `<!doctype html>
 <h2>Raw evidence</h2><ul>${upload.runFiles.map((name) => `<li><a href="data/raw/${name}">${name}</a></li>`).join('')}<li><a href="data/raw/upload-check-linux-summary.json">Summary, patch and source hashes</a></li></ul>
 </article></main></body></html>\n`);
 
-const httpRows = [
-  ['Default workers, small smoke', httpSmoke],
-  ['Controlled API only', httpControlled],
-].map(([label, run]) => `<tr><td>${label}</td><td class="num">${run.summary.upstream.uploadMedianMs.toFixed(3)}</td><td class="num">${run.summary.candidate.uploadMedianMs.toFixed(3)}</td><td>${run === httpSmoke ? 'Inconclusive' : 'Lower in all six paired blocks'}</td></tr>`).join('\n');
+const defaultUpload = httpMedia.performanceGate.metrics.elapsedMs;
+const defaultMedia = httpMedia.performanceGate.metrics.mediaReadyMs;
+const interval = (analysis) => `${(-analysis.exploratory95PercentBlockBootstrapInterval[1]).toFixed(2)}–${(-analysis.exploratory95PercentBlockBootstrapInterval[0]).toFixed(2)}% lower`;
+const mediaRowsHtml = [
+  ['HTTP completion', 'uploadMedianMs', defaultUpload],
+  ['Thumbnail and preview ready', 'mediaReadyMedianMs', defaultMedia],
+].map(([label, key, analysis]) => `<tr><td>${label}</td><td class="num">${httpMedia.summary.upstream[key].toFixed(2)}</td><td class="num">${httpMedia.summary.candidate[key].toFixed(2)}</td><td class="num">${(-analysis.geometricMeanIncreasePercent).toFixed(2)}% lower</td><td class="num">${interval(analysis)}</td></tr>`).join('\n');
 fs.writeFileSync(path.join(SRC, 'http-comparison.html'), `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HTTP upload comparison · OpenFrame</title><meta name="description" content="OpenFrame and Immich v3.3.5 tested with authenticated HTTP, durable PostgreSQL and disposable storage. Controlled results and default-worker uncertainty.">
+<title>HTTP and media-ready comparison · OpenFrame</title><meta name="description" content="OpenFrame and Immich v3.3.5 tested with default workers, authenticated HTTP, durable PostgreSQL and disposable storage. Raw evidence and measurement limits.">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/site.css"><script src="site.config.js"></script><script src="assets/site.js" defer></script>
-</head><body><main class="doc-main"><header class="doc-head"><p class="eyebrow cap">Latest-release comparison · HTTP upload completion</p><h1>Controlled uploads complete ${(-paired.geometricMeanIncreasePercent).toFixed(2)}% sooner</h1>
-<p class="lede">OpenFrame had lower upload completion latency in all six controlled deployment pairs against Immich ${httpControlled.baselineRelease.tag_name}. Background workers were excluded equally. The separate default-worker smoke remains inconclusive.</p><div class="doc-meta"><span>2026-10-26</span><span>AMD A4-9125 Linux box</span><span class="badge warn">Controlled request path only</span></div></header>
-<article class="doc-body"><h2>Both outcomes</h2><table><thead><tr><th>Experiment</th><th>Immich median, ms</th><th>OpenFrame median, ms</th><th>Interpretation</th></tr></thead><tbody>${httpRows}</tbody></table>
-<p>These table values are medians of individual upload requests. The headline instead uses the geometric mean of the six paired deployment-block median ratios. Its exploratory 95% block-bootstrap interval is ${(-paired.exploratory95PercentBlockBootstrapInterval[1]).toFixed(2)}–${(-paired.exploratory95PercentBlockBootstrapInterval[0]).toFixed(2)}% lower latency.</p>
-<h2>What ran</h2><p>Both builds received identical seeded 512 × 512 PNG fixtures, 787,252 bytes each, over loopback HTTP. Requests were sequential. PostgreSQL fsync, full-page writes and synchronous commit stayed enabled; Redis and storage writes were real. Each version used its own disposable database and upload volumes.</p>
-<p>The default-worker smoke used three deployment pairs and 15 measured uploads per version. Its candidate median was 4.7% higher. This small, noisy result is inconclusive and remains published. The controlled follow-up used six alternating deployment pairs and 120 measured uploads per version, with one warmup upload per deployment. It set <code>IMMICH_WORKERS_INCLUDE=api</code> equally for both builds, so media processing and geodata jobs did not compete with upload requests. ML was disabled in both experiments.</p>
-<h2>Versions and correctness</h2><p>The baseline is official Immich ${httpControlled.baselineRelease.tag_name}, commit <code>${httpControlled.baselineRelease.commit}</code>. The candidate is the full compiled OpenFrame server source identified by the source and dist hashes in the raw result. It reuses the existing candidate production dependency/native-codec image; web and CLI builds in that image were not refreshed. This is a backend comparison.</p>
-<p>All measured deployments passed upload/download byte equality, unauthorized requests returning 401, range requests returning 206, conditional requests returning 304, duplicate upload identity and mixed-encoding preflight checks.</p>
-<h2>Regression limits</h2><div class="callout warn"><p class="cap">Not a whole-app qualification</p><p>The exploratory regression budget was 5%, chosen before the controlled run completed. No regression exceeding that budget was detected in this controlled path. Six paired blocks on one shared host give limited precision. These results do not qualify default-worker throughput, media-ready latency, concurrent capacity, WAN, TLS or mobile clients.</p></div>
-<p>Benchmark commands, assertions, fixture generation and analysis are in <a href="https://github.com/Ghoststack0/OpenFrame/blob/main/server/test/benchmarks/METHODOLOGY.md">the methodology</a>. Analysis resamples whole paired deployment blocks 10,000 times with seed 0, rather than treating individual requests as independent deployments. Disposable containers and volumes were removed after the experiment.</p>
-<h2>Raw evidence</h2><ul><li><a href="data/raw/http-upload-linux.json">Default-worker smoke, including the slower median</a></li><li><a href="data/raw/http-upload-linux-controlled.json">Controlled run, all samples, build hashes and paired analysis</a></li></ul></article></main></body></html>\n`);
+</head><body><main class="doc-main"><header class="doc-head"><p class="eyebrow cap">Latest-release comparison · default workers</p><h1>Lower upload and media-ready latency in this test</h1>
+<p class="lede">Across six paired deployments, the OpenFrame candidate had ${(-defaultUpload.geometricMeanIncreasePercent).toFixed(2)}% lower HTTP upload completion latency and ${(-defaultMedia.geometricMeanIncreasePercent).toFixed(2)}% lower thumbnail/preview readiness latency than Immich ${httpMedia.baselineRelease.tag_name}. These are scoped, exploratory results from one shared host.</p><div class="doc-meta"><span>2026-10-26</span><span>AMD A4-9125 Linux box</span><span class="badge warn">ML disabled</span></div></header>
+<article class="doc-body"><h2>Default-worker result</h2><table><thead><tr><th>Metric</th><th>Immich median, ms</th><th>OpenFrame median, ms</th><th>Paired change</th><th>Exploratory 95% interval</th></tr></thead><tbody>${mediaRowsHtml}</tbody></table>
+<p>The millisecond columns are pooled request medians. Percentage changes use the geometric mean of six paired deployment-median ratios, so they differ from the pooled median ratio. Each build completed 120 measured uploads across six deployments, with order alternating between builds. One pair favored upstream on both metrics. Two upstream deployments were much slower than the others, so host variation affects the estimate.</p>
+<h2>What ran</h2><p>Both builds used default API and microservices workers, with only ML disabled. Every deployment started with fresh disposable PostgreSQL and upload volumes. API readiness, geodata import and one complete media warmup finished before measurement. Twenty unique seeded 512 × 512 PNGs followed sequentially per deployment, with identical bytes across builds. PostgreSQL fsync, full-page writes and synchronous commit stayed enabled; Redis and storage writes were real.</p>
+<p>HTTP completion includes reading the full upload response. Media-ready time starts before that upload and ends when authenticated thumbnail and preview endpoints both return image content. Unsuccessful readiness polls sleep 50 ms, and polling HTTP cost is included. This is client-observed image readiness, not exact worker execution time or completion of every queue.</p>
+<h2>Earlier experiments remain visible</h2><table><thead><tr><th>Experiment</th><th>Immich HTTP median, ms</th><th>OpenFrame HTTP median, ms</th><th>Interpretation</th></tr></thead><tbody>
+<tr><td>Small default-worker smoke</td><td class="num">${httpSmoke.summary.upstream.uploadMedianMs.toFixed(3)}</td><td class="num">${httpSmoke.summary.candidate.uploadMedianMs.toFixed(3)}</td><td>4.7% higher candidate median; inconclusive</td></tr>
+<tr><td>Controlled API only</td><td class="num">${httpControlled.summary.upstream.uploadMedianMs.toFixed(3)}</td><td class="num">${httpControlled.summary.candidate.uploadMedianMs.toFixed(3)}</td><td>${(-paired.geometricMeanIncreasePercent).toFixed(2)}% lower paired latency; background workers excluded</td></tr></tbody></table>
+<p>The controlled experiment's exploratory interval is ${interval(paired)}. The later default-worker protocol used a fixed six pairs and separate readiness measurements. No samples were added after seeing results, and the earlier slower smoke was retained.</p>
+<h2>Versions and correctness</h2><p>The baseline is official Immich ${httpMedia.baselineRelease.tag_name}, commit <code>${httpMedia.baselineRelease.commit}</code>. The candidate is the full compiled OpenFrame server identified by source hash <code>${httpMedia.candidateBuild.sourceTreeSha256}</code>. It reuses the recorded candidate production dependencies and native codecs; its web and CLI builds were not refreshed. Current backend source and compiled output match the measured hashes.</p>
+<p>All twelve deployments passed original byte equality, unauthorized requests returning 401, ranges returning 206, conditional requests returning 304, duplicate identity, ordered mixed-encoding preflight checks and thumbnail/preview readability.</p>
+<h2>Regression interpretation and limits</h2><div class="callout warn"><p class="cap">Not application-wide qualification</p><p>Both intervals lie below the strict zero-slowdown reference, separately from meeting the predeclared exploratory 5% budget. This supports lower latency within this experiment. Shared-host variance and six paired blocks limit confidence. The media-ready interval is only 0.38 percentage points from zero at its near boundary; 50 ms polling further limits interpretation of small differences.</p></div>
+<p>Video, concurrent backlogs, populated libraries, ML, WAN, TLS and mobile clients were not measured. The image reuses recorded dependencies with newly compiled server code; it is not a fresh release image. These results do not prove every workload is faster or regression-free.</p>
+<h2>Reproduce and inspect</h2><p>The <a href="https://github.com/Ghoststack0/OpenFrame/blob/main/server/test/benchmarks/MEDIA-READY-PROTOCOL.md">fixed protocol</a> and <a href="https://github.com/Ghoststack0/OpenFrame/blob/main/server/test/benchmarks/MEDIA-READY-RESULTS.md">handoff with hashes and limitations</a> accompany the harness. Analysis resamples whole paired deployment blocks 10,000 times, seed 0. Disposable containers, volumes and networks were removed.</p>
+<ul><li><a href="data/raw/http-upload-media-ready.json">Default-worker media-ready run, all samples and paired analysis</a></li><li><a href="data/raw/http-upload-linux.json">Original default-worker smoke, including its slower median</a></li><li><a href="data/raw/http-upload-linux-controlled.json">Controlled API-only run</a></li><li><a href="https://github.com/Ghoststack0/OpenFrame/blob/main/server/test/benchmarks/results/media-ready-evidence.tar.gz">Evidence archive with logs, protocol and script hashes</a></li></ul></article></main></body></html>\n`);
 
 // ---------- pages quote the evidence ----------
 
@@ -328,10 +361,13 @@ const expected = {
   ],
   'methodology.html': [CPU, BASE_REF, ...['person-linux-db', 'bcrypt-local', 'media-local', 'hosted-network', 'deployment'].map((n) => `href="data/raw/${n}.json"`)],
   'release-comparison.html': [upload.baselineRelease.commit, upload.candidate.head, ...upload.runFiles.map((name) => `href="data/raw/${name}"`)],
-  'http-comparison.html': [httpControlled.baselineRelease.commit, `href="data/raw/http-upload-linux.json"`, `href="data/raw/http-upload-linux-controlled.json"`],
+  'http-comparison.html': [httpControlled.baselineRelease.commit, httpMedia.candidateBuild.sourceTreeSha256, 'href="data/raw/http-upload-media-ready.json"', `href="data/raw/http-upload-linux.json"`, `href="data/raw/http-upload-linux-controlled.json"`],
   // The OpenFrame overview repeats two headline tiles and must quote them exactly.
   'index.html': [
     'href="release-comparison.html"',
+    `${(-defaultUpload.geometricMeanIncreasePercent).toFixed(2)}%`,
+    `${(-defaultMedia.geometricMeanIncreasePercent).toFixed(2)}%`,
+    `${fonts.before.filter((font) => font.preloaded).reduce((sum, font) => sum + font.bytes, 0).toLocaleString('en-US')} → ${fonts.after.filter((font) => font.preloaded).reduce((sum, font) => sum + font.bytes, 0).toLocaleString('en-US')}`,
     `${Math.min(...upload.results.map((row) => row.medianReductionPercent)).toFixed(1)}–${Math.max(...upload.results.map((row) => row.medianReductionPercent)).toFixed(1)}%`,
     `data-value="${fix(f10000.modified.medianMs, 1)}" data-before="${fix(f10000.original.medianMs, 1)}"`,
     `data-value="${fix(bc.modified.checkpoint, 2)}" data-before="${fix(bc.original.checkpoint, 1)}"`,

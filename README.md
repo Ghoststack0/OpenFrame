@@ -41,11 +41,12 @@ These are what OpenFrame is aiming for. They are **goals, not delivered features
 | :----- | :--- | :------- |
 | `LIMIT 1` on the random-face query, async bcrypt checks, one fewer `fs.access` call per media request | Server | Focused benchmarks against upstream `256eb55`, published at [immich.yash0.in/performance](https://immich.yash0.in/performance.html). Synthetic and per-change, not an end-to-end speedup. |
 | OpenFrame branding: logo, favicons, page titles and PWA name | Web | Visual change only. Identifiers that clients and existing installs depend on keep their `immich` names. |
+| Self-hosted Geist and Geist Mono typography | Web | Preloaded font files changed from 4,971,652 B to 69,560 B. Static file sizes only; no page-load-time claim. Other scripts use platform font fallback. [Evidence](https://immich.yash0.in/data/raw/font-payload.json). |
 | Overall upload progress: one size-weighted progress bar with bytes processed and combined speed, and a progress ring on the minimized upload button | Web | Unit tests in `web/src/lib/stores/upload.spec.ts`. The progress UI itself is not a speed change; it shows how far along uploads are. |
 | OpenFrame app names, in-app mark, launcher and splash assets | Android / iOS | Asset dimensions and resource references checked. Full native builds have not been run. |
 | `openframe` CLI command with the existing `immich` alias retained | CLI | Production build, type-check, lint, formatting and 45 tests pass on Node 24. |
 
-Nothing has been measured yet for end-to-end upload speed or the mobile-to-desktop connection.
+Against Immich v3.3.5, the fixed default-worker experiment showed 16.27% lower paired HTTP completion latency and 15.57% lower thumbnail/preview readiness latency. Both exploratory intervals lie below zero, but this is one shared host with ML disabled and small sequential PNGs. The earlier small smoke was 4.7% slower and remains inconclusive; the separate API-only experiment showed 8.75% lower paired latency. See the [HTTP comparison](https://immich.yash0.in/http-comparison) for all outcomes and raw evidence. Video, concurrent load, populated libraries, ML, WAN and mobile connectivity remain unmeasured.
 
 Results come in two kinds, and they're kept apart:
 

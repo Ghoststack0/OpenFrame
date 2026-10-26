@@ -34,6 +34,7 @@ for (const name of [
   'http-config.json',
   'http-upload.py',
   'analyze-http.py',
+  'analyze-media-ready.py',
   'run-http.sh',
 ]) {
   await cp(join(here, name), resolve(output, name));

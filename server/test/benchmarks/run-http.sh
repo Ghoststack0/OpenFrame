@@ -13,3 +13,7 @@ python3 http-upload.py "$@"
 if [[ ${1:-} == --controlled ]]; then
   python3 analyze-http.py http-upload-controlled.json
 fi
+
+if [[ ${1:-} == --media-ready ]]; then
+  python3 analyze-media-ready.py http-upload-media-ready.json
+fi
