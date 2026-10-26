@@ -1,10 +1,14 @@
-A command-line interface for interfacing with the self-hosted photo manager [Immich](https://immich.app/).
+# OpenFrame CLI
 
-Please see the [Immich CLI documentation](https://docs.immich.app/features/command-line-interface).
+A command-line client for OpenFrame, a fork of [Immich](https://immich.app/).
+
+After building and installing this package, run `openframe --help`. The `immich` command remains available, and existing `IMMICH_*` environment variables and `.config/immich/` credentials continue to work.
+
+The client retains the commands described in the [upstream Immich CLI documentation](https://docs.immich.app/features/command-line-interface).
 
 # For developers
 
-Before building the CLI, you must build the immich server and the open-api client. You can use the following command:
+Before building the CLI, you must build the OpenFrame server and the open-api client. You can use the following command:
 
     $ mise //:open-api
 
@@ -18,7 +22,7 @@ Go to the cli folder and build it:
 
 ## Run and Debug from source (VSCode)
 
-With VScode you can run and debug the Immich CLI. Go to the launch.json file, find the Immich CLI config and change this with the command you need to debug
+With VScode you can run and debug the OpenFrame CLI. Go to the launch.json file, find the Immich CLI config and change this with the command you need to debug
 
 `"args": ["upload", "--help"],`
 
@@ -30,4 +34,5 @@ You can also build and install the CLI using
 
     $ pnpm run build
     $ pnpm install -g .
-****
+
+---

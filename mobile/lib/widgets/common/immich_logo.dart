@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ImmichLogo extends StatelessWidget {
   final double size;
@@ -7,11 +8,11 @@ class ImmichLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image(
-      image: const AssetImage('assets/immich-logo.png'),
+    return SvgPicture.asset(
+      'assets/openframe-icon.svg',
       width: size,
-      filterQuality: FilterQuality.high,
-      isAntiAlias: true,
+      height: size,
+      semanticsLabel: 'OpenFrame',
     );
   }
 }

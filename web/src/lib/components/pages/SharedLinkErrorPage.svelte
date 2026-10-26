@@ -1,10 +1,11 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { APP_NAME } from '$lib/branding';
   import { t } from 'svelte-i18n';
 </script>
 
 <svelte:head>
-  <title>{$t('error')} - Immich</title>
+  <title>{$t('error')} - {APP_NAME}</title>
 </svelte:head>
 
 <section class="flex h-dvh w-dvw flex-col place-content-center place-items-center px-4">

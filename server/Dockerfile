@@ -99,7 +99,7 @@ COPY --from=web /usr/src/app/web/build /build/www
 COPY --from=cli /output/cli-pruned ./cli
 COPY --from=plugins /usr/src/app/packages/plugin-core/dist /build/plugins/immich-plugin-core/dist
 COPY --from=plugins /usr/src/app/packages/plugin-core/manifest.json /build/plugins/immich-plugin-core/manifest.json
-RUN ln -s ../../cli/bin/immich server/bin/immich
+RUN ln -s ../../cli/bin/immich server/bin/immich && ln -s immich server/bin/openframe
 COPY LICENSE /licenses/LICENSE.txt
 COPY LICENSE /LICENSE
 

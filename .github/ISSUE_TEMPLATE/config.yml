@@ -1,14 +1,8 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: ✋ I have a question or need support
-    url: https://discord.immich.app
-    about: We use GitHub for tracking bugs, please check out our Discord channel for freaky fast support.
-  - name: 📷 My photo or video has a date, time, or timezone problem
-    url: https://github.com/immich-app/immich/discussions/12650
-    about: Upload a sample file to this discussion and we will take a look
-  - name: 🌟 Feature request
-    url: https://github.com/immich-app/immich/discussions/new?category=feature-request
-    about: Please use our GitHub Discussion for making feature requests.
-  - name: 🫣 I'm unsure where to go
-    url: https://discord.immich.app
-    about: If you are unsure where to go, then joining our Discord is recommended; Just ask!
+  - name: OpenFrame questions and feature requests
+    url: https://github.com/Ghoststack0/OpenFrame/issues/new
+    about: Ask about this fork or propose performance, implementation, and UX improvements here.
+  - name: Upstream Immich documentation
+    url: https://docs.immich.app/
+    about: Installation and configuration reference for the upstream project. Report OpenFrame bugs in this fork.

@@ -1,7 +1,7 @@
 {
-  "name": "immich-monorepo",
+  "name": "openframe-monorepo",
   "version": "3.3.0-rc.0",
-  "description": "Monorepo for Immich",
+  "description": "OpenFrame, a performance-focused fork of Immich",
   "type": "module",
   "private": true,
   "scripts": {

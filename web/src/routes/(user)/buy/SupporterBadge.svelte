@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Logo } from '@immich/ui';
+  import { immichLogo } from '@immich/ui';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -14,7 +14,12 @@
   class="supporter-effect relative mt-2 flex place-items-center gap-1 rounded-lg border border-transparent bg-gray-200/50 bg-clip-padding p-2 dark:bg-immich-dark-primary/10"
   class:place-content-center={centered}
 >
-  <Logo variant="icon" size={logoSize === 'sm' ? 'tiny' : 'small'} />
+  <img
+    src={immichLogo}
+    class="aspect-square {logoSize === 'sm' ? 'h-8' : 'h-10'}"
+    alt="Immich logo"
+    draggable="false"
+  />
   <p class="dark:text-gray-100">{$t('purchase_account_info')}</p>
 </div>
 

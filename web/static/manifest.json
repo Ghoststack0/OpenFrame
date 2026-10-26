@@ -1,6 +1,6 @@
 {
   "background_color": "#ffffff",
-  "description": "Self-hosted photo and video backup solution directly from your mobile phone.",
+  "description": "OpenFrame: a self-hosted photo and video library, forked from Immich.",
   "dir": "auto",
   "display": "standalone",
   "icons": [
@@ -24,8 +24,8 @@
     }
   ],
   "lang": "en",
-  "name": "Immich",
-  "short_name": "Immich",
+  "name": "OpenFrame",
+  "short_name": "OpenFrame",
   "shortcuts": [
     {
       "name": "Photos",

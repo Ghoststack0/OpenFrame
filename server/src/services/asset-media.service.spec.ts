@@ -780,6 +780,44 @@ describe(AssetMediaService.name, () => {
   });
 
   describe('bulkUploadCheck', () => {
+    it('should preserve order and trashed status for repeated checksums with mixed encodings', async () => {
+      const checksum = Buffer.from('d2947b871a706081be194569951b7db246907957', 'hex');
+      mocks.asset.getByChecksums.mockResolvedValue([{ id: 'trashed', checksum, deletedAt: new Date() }]);
+
+      await expect(
+        sut.bulkUploadCheck(authStub.admin, {
+          assets: [
+            { id: 'hex', checksum: checksum.toString('hex').toUpperCase() },
+            { id: 'new', checksum: Buffer.alloc(20).toString('base64') },
+            { id: 'base64', checksum: checksum.toString('base64') },
+          ],
+        }),
+      ).resolves.toEqual({
+        results: [
+          {
+            id: 'hex',
+            action: AssetUploadAction.REJECT,
+            reason: AssetRejectReason.DUPLICATE,
+            assetId: 'trashed',
+            isTrashed: true,
+          },
+          { id: 'new', action: AssetUploadAction.ACCEPT },
+          {
+            id: 'base64',
+            action: AssetUploadAction.REJECT,
+            reason: AssetRejectReason.DUPLICATE,
+            assetId: 'trashed',
+            isTrashed: true,
+          },
+        ],
+      });
+      expect(mocks.asset.getByChecksums).toHaveBeenCalledWith(authStub.admin.user.id, [
+        checksum,
+        Buffer.alloc(20),
+        checksum,
+      ]);
+    });
+
     it('should accept hex and base64 checksums', async () => {
       const file1 = Buffer.from('d2947b871a706081be194569951b7db246907957', 'hex');
       const file2 = Buffer.from('53be335e99f18a66ff12e9a901c7a6171dd76573', 'hex');

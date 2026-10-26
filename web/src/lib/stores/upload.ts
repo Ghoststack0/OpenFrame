@@ -1,5 +1,49 @@
-import { derived, writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 import { UploadState, type UploadAsset } from '$lib/types';
+
+export type UploadProgress = {
+  /** Bytes processed, counting finished, failed and skipped files as fully processed */
+  loaded: number;
+  total: number;
+  /** Combined speed of the files uploading right now, in bytes per second */
+  speed: number;
+  /** 0-100, weighted by file size so one large video doesn't read as "almost done" */
+  percent: number;
+};
+
+/**
+ * @param settledBytes size of finished files already removed from the list, so the bar doesn't move
+ * backwards when completed uploads are cleared
+ */
+export const getUploadProgress = (items: UploadAsset[], settledBytes = 0): UploadProgress => {
+  let loaded = settledBytes;
+  let total = settledBytes;
+  let speed = 0;
+  for (const item of items) {
+    const size = item.file.size;
+    total += size;
+    switch (item.state) {
+      case UploadState.STARTED: {
+        loaded += (size * (item.progress ?? 0)) / 100;
+        speed += item.speed ?? 0;
+        break;
+      }
+      case UploadState.PENDING:
+      case undefined: {
+        break;
+      }
+      default: {
+        loaded += size;
+      }
+    }
+  }
+
+  const percent = total > 0 ? Math.min(100, Math.floor((loaded / total) * 100)) : 0;
+  return { loaded, total, speed, percent };
+};
+
+const settledStates = new Set([UploadState.DONE, UploadState.ERROR, UploadState.DUPLICATED]);
+const isSettled = ({ state }: UploadAsset) => state !== undefined && settledStates.has(state);
 
 function createUploadStore() {
   const uploadAssets = writable<Array<UploadAsset>>([]);
@@ -16,6 +60,14 @@ function createUploadStore() {
   const isDismissible = derived(uploadAssets, (items) =>
     items.some((item) => item.state === UploadState.ERROR || item.state === UploadState.DUPLICATED),
   );
+  const settledBytes = writable(0);
+  const progress = derived([uploadAssets, settledBytes], ([$items, $settled]) => getUploadProgress($items, $settled));
+  const settle = (items: UploadAsset[]) => {
+    const bytes = items.reduce((sum, item) => sum + item.file.size, 0);
+    if (bytes > 0) {
+      settledBytes.update((value) => value + bytes);
+    }
+  };
   const remainingUploads = derived(
     uploadAssets,
     (values) => values.filter((a) => a.state === UploadState.PENDING || a.state === UploadState.STARTED).length,
@@ -82,6 +134,9 @@ function createUploadStore() {
   const removeItem = (id: string) => {
     uploadAssets.update((uploadingAsset) => {
       const assetToRemove = uploadingAsset.find((a) => a.id === id);
+      if (assetToRemove && isSettled(assetToRemove)) {
+        settle([assetToRemove]);
+      }
       if (assetToRemove) {
         stats.update((stats) => {
           switch (assetToRemove.state) {
@@ -115,13 +170,15 @@ function createUploadStore() {
     });
   };
 
-  const dismissErrors = () =>
-    uploadAssets.update((value) =>
-      value.filter((e) => e.state !== UploadState.ERROR && e.state !== UploadState.DUPLICATED),
-    );
+  const dismissErrors = () => {
+    const isDismissed = (e: UploadAsset) => e.state === UploadState.ERROR || e.state === UploadState.DUPLICATED;
+    settle(get(uploadAssets).filter((e) => isDismissed(e)));
+    uploadAssets.update((value) => value.filter((e) => !isDismissed(e)));
+  };
 
   const reset = () => {
     uploadAssets.set([]);
+    settledBytes.set(0);
     stats.set({ errors: 0, duplicates: 0, success: 0, total: 0 });
   };
 
@@ -150,6 +207,7 @@ function createUploadStore() {
 
   return {
     stats,
+    progress,
     remainingUploads,
     isDismissible,
     isUploading,

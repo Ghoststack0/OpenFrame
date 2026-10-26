@@ -1,6 +1,7 @@
 <script lang="ts">
   import { locale } from '$lib/stores/preferences.store';
   import { uploadAssetsStore } from '$lib/stores/upload';
+  import { getByteUnitString } from '$lib/utils/byte-units';
   import { uploadExecutionQueue } from '$lib/utils/file-uploader';
   import { acquireWakeLock, releaseWakeLock } from '$lib/utils/wakelock.svelte';
   import { Icon, IconButton, toastManager } from '@immich/ui';
@@ -14,7 +15,10 @@
   let showOptions = $state(false);
   let concurrency = $state(uploadExecutionQueue.concurrency);
 
-  let { stats, isDismissible, isUploading, remainingUploads } = uploadAssetsStore;
+  let { stats, progress, isDismissible, isUploading, remainingUploads } = uploadAssetsStore;
+
+  // Circumference of the progress ring drawn around the minimized button (r = 30)
+  const ringLength = 2 * Math.PI * 30;
 
   let hasRemaining = $derived($remainingUploads > 0);
 
@@ -111,6 +115,32 @@
             {/if}
           </div>
         </div>
+        <div class="mb-4 flex flex-col gap-1.5">
+          <div
+            role="progressbar"
+            aria-label={$t('uploading')}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={$progress.percent}
+            class="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+          >
+            <div
+              class="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+              style:width="{$progress.percent}%"
+            ></div>
+          </div>
+          <p class="flex justify-between gap-2 text-xs immich-form-label tabular-nums">
+            <span>
+              {$progress.percent}% · {getByteUnitString($progress.loaded, $locale)} / {getByteUnitString(
+                $progress.total,
+                $locale,
+              )}
+            </span>
+            {#if hasRemaining && $progress.speed > 0}
+              <span>{getByteUnitString($progress.speed, $locale)}/s</span>
+            {/if}
+          </p>
+        </div>
         {#if showOptions}
           <div class="mb-4 max-h-100 immich-scrollbar overflow-y-auto rounded-lg">
             <div class="flex h-6.5 place-items-center gap-1">
@@ -160,9 +190,25 @@
           type="button"
           in:scale={{ duration: 250, easing: quartInOut }}
           onclick={() => (showDetail = true)}
-          class="flex size-16 place-content-center place-items-center rounded-full bg-subtle p-5 text-sm text-primary shadow-lg"
+          aria-label={$t('upload_details')}
+          class="relative flex size-16 place-content-center place-items-center rounded-full bg-subtle p-5 text-sm text-primary shadow-lg"
         >
-          <div class="animate-pulse">
+          <svg class="pointer-events-none absolute inset-0 -rotate-90" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="3" opacity="0.15" />
+            <circle
+              cx="32"
+              cy="32"
+              r="30"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-dasharray={ringLength}
+              stroke-dashoffset={ringLength * (1 - $progress.percent / 100)}
+              class="transition-[stroke-dashoffset] duration-300 ease-out"
+            />
+          </svg>
+          <div class={hasRemaining ? 'animate-pulse' : ''}>
             <Icon icon={mdiCloudUploadOutline} size="30" />
           </div>
         </button>

@@ -3,6 +3,7 @@
   import IndividualSharedViewer from '$lib/components/share-page/IndividualSharedViewer.svelte';
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import ThemeButton from '$lib/components/shared-components/ThemeButton.svelte';
+  import { APP_NAME } from '$lib/branding';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { setSharedLink } from '$lib/utils';
@@ -43,7 +44,7 @@
       sharedLink = await sharedLinkLogin({ key, slug, sharedLinkLoginDto: { password } });
       setSharedLink(sharedLink);
       passwordRequired = false;
-      title = (sharedLink.album ? sharedLink.album.albumName : $t('public_share')) + ' - Immich';
+      title = (sharedLink.album ? sharedLink.album.albumName : $t('public_share')) + ` - ${APP_NAME}`;
       await tick();
       await navigate(
         { targetRoute: 'current', assetId: null, assetGridRouteSearchParams: assetViewerManager.gridScrollTarget },

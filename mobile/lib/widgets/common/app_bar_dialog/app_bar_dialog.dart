@@ -20,6 +20,7 @@ import 'package:immich_mobile/widgets/common/app_bar_dialog/app_bar_profile_info
 import 'package:immich_mobile/widgets/common/app_bar_dialog/app_bar_server_info.dart';
 import 'package:immich_mobile/widgets/common/confirm_dialog.dart';
 import 'package:immich_mobile/widgets/common/immich_logo.dart';
+import 'package:immich_mobile/widgets/common/immich_title_text.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -57,10 +58,7 @@ class ImmichAppBarDialog extends HookConsumerWidget {
               alignment: Alignment.center,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Image.asset(
-                  context.isDarkTheme ? 'assets/immich-text-dark.png' : 'assets/immich-text-light.png',
-                  height: 16,
-                ),
+                child: const ImmichTitleText(fontSize: 16),
               ),
             ),
           ],

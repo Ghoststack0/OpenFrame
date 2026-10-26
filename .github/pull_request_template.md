@@ -8,7 +8,7 @@ Fixes # (issue)
 
 ## How Has This Been Tested?
 
-<!-- Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration -->
+<!-- Describe the checks you ran and how to reproduce them. For performance changes, include baseline/candidate commits, hardware/software, workload, commands, run count, results, and any regressions or measurement limits. -->
 
 - [ ] Test A
 - [ ] Test B
@@ -38,4 +38,4 @@ The `/api/something` endpoint is now `/api/something-else`
 
 ## Please describe to which degree, if any, an LLM was used in creating this pull request.
 
-...
+<!-- AI-assisted and AI-generated contributions are welcome. Describe the assistance and how you reviewed and verified the result, or write "None". -->

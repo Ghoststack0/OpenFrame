@@ -8,6 +8,7 @@
   import NavigationLoadingBar from './NavigationLoadingBar.svelte';
   import UploadPanel from './UploadPanel.svelte';
   import VersionAnnouncement from './VersionAnnouncement.svelte';
+  import { APP_NAME, applyBranding } from '$lib/branding';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import ServerRestartingModal from '$lib/modals/ServerRestartingModal.svelte';
@@ -169,6 +170,7 @@
   let showNavigationLoadingBar = $state(false);
 
   toastManager.setOptions({ class: 'top-16 fixed' });
+  applyBranding();
 
   onMount(() => {
     const element = document.querySelector('#stencil');
@@ -236,7 +238,7 @@
 <VersionAnnouncement />
 
 <svelte:head>
-  <title>{page.data.meta?.title || 'Web'} - Immich</title>
+  <title>{page.data.meta?.title || 'Web'} - {APP_NAME}</title>
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   <meta name="theme-color" content="white" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="black" media="(prefers-color-scheme: dark)" />

@@ -12,23 +12,23 @@ const defaultConfigDirectory = path.join(os.homedir(), '.config/immich/');
 const defaultConcurrency = Math.max(1, os.cpus().length - 1);
 
 const program = new Command()
-  .name('immich')
+  .name('openframe')
   .version(version)
-  .description('Command line interface for Immich')
+  .description('Command line interface for OpenFrame')
   .addOption(
     new Option('-d, --config-directory <directory>', 'Configuration directory where auth.yml will be stored')
       .env('IMMICH_CONFIG_DIR')
       .default(defaultConfigDirectory),
   )
-  .addOption(new Option('-u, --url [url]', 'Immich server URL').env('IMMICH_INSTANCE_URL'))
-  .addOption(new Option('-k, --key [key]', 'Immich API key').env('IMMICH_API_KEY'));
+  .addOption(new Option('-u, --url [url]', 'OpenFrame server URL').env('IMMICH_INSTANCE_URL'))
+  .addOption(new Option('-k, --key [key]', 'OpenFrame API key').env('IMMICH_API_KEY'));
 
 program
   .command('login')
   .alias('login-key')
   .description('Login using an API key')
-  .argument('url', 'Immich server URL')
-  .argument('key', 'Immich API key')
+  .argument('url', 'OpenFrame server URL')
+  .argument('key', 'OpenFrame API key')
   .action((url, key) => login(url, key, program.opts()));
 
 program

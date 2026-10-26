@@ -1,5 +1,6 @@
 import { commandPaletteManager } from '@immich/ui';
 import { goto } from '$app/navigation';
+import { APP_NAME } from '$lib/branding';
 import { languageManager } from '$lib/managers/language-manager.svelte';
 import { readPreloadedQuery } from '$lib/queries/client';
 import { getServerConfigQuery } from '$lib/queries/server.query';
@@ -29,7 +30,7 @@ export const load = (async ({ fetch, url }) => {
   return {
     error,
     meta: {
-      title: 'Immich',
+      title: APP_NAME,
     },
   };
 }) satisfies LayoutLoad;
