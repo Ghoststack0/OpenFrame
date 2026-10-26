@@ -150,12 +150,13 @@ flutter:
         - asset: fonts/GoogleSansCode/GoogleSansCode-SemiBold.ttf
           weight: 600
 flutter_launcher_icons:
-  image_path_android: 'assets/immich-logo.png'
-  adaptive_icon_background: '#ffffff'
-  adaptive_icon_foreground: 'assets/immich-logo-android-adaptive-icon.png'
-  image_path_ios: 'assets/immich-logo-w-bg.png'
+  image_path_android: 'assets/openframe-launcher.png'
+  adaptive_icon_background: '#0b0b0c'
+  adaptive_icon_foreground: 'assets/openframe-launcher.png'
+  adaptive_icon_monochrome: 'assets/openframe-monochrome.png'
+  image_path_ios: 'assets/openframe-launcher.png'
   android: 'ic_launcher'
-  ios: false
+  ios: false # Generator 0.14.4 rewrites unrelated Xcode asset settings.
   remove_alpha_ios: true
 
 analyzer:

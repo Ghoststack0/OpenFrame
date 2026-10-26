@@ -8,11 +8,6 @@ class ImmichLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SvgPicture.asset(
-      'assets/openframe-icon.svg',
-      width: size,
-      height: size,
-      semanticsLabel: 'OpenFrame',
-    );
+    return SvgPicture.asset('assets/openframe-icon.svg', width: size, height: size, semanticsLabel: 'OpenFrame');
   }
 }

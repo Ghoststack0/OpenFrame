@@ -56,10 +56,7 @@ class ImmichAppBarDialog extends HookConsumerWidget {
             ),
             Align(
               alignment: Alignment.center,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: const ImmichTitleText(fontSize: 16),
-              ),
+              child: Padding(padding: const EdgeInsets.only(bottom: 4), child: const ImmichTitleText(fontSize: 16)),
             ),
           ],
         ),
