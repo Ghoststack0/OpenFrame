@@ -19,6 +19,7 @@ if (!['build', 'deploy'].includes(cmd)) {
 }
 
 // Reuse the kit's checked build, then move the output from /<slug>/ to the domain root.
+execFileSync(process.execPath, [path.join(ROOT, 'prepare-data.mjs')], { stdio: 'inherit', cwd: ROOT });
 execFileSync(process.execPath, [path.join(ROOT, 'scripts/site.mjs'), 'build'], { stdio: 'inherit', cwd: ROOT });
 const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'dist/wrangler.json'), 'utf8'));
 const slug = config.name.replace(/^a-site-/, '');
