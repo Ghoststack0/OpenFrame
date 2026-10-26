@@ -41,7 +41,7 @@ These are what OpenFrame is aiming for. They are **goals, not delivered features
 | :----- | :--- | :------- |
 | `LIMIT 1` on the random-face query, async bcrypt checks, one fewer `fs.access` call per media request | Server | Focused benchmarks against upstream `256eb55`, published at [immich.yash0.in/performance](https://immich.yash0.in/performance.html). Synthetic and per-change, not an end-to-end speedup. |
 | OpenFrame branding: logo, favicons, page titles and PWA name | Web | Visual change only. Identifiers that clients and existing installs depend on keep their `immich` names. |
-| Overall upload progress: one size-weighted progress bar with bytes processed and combined speed, and a progress ring on the minimized upload button | Web | Unit tests in `web/src/lib/stores/upload.spec.ts`. Not a speed change: uploads are no faster, you can just see how far along they are. |
+| Overall upload progress: one size-weighted progress bar with bytes processed and combined speed, and a progress ring on the minimized upload button | Web | Unit tests in `web/src/lib/stores/upload.spec.ts`. The progress UI itself is not a speed change; it shows how far along uploads are. |
 
 Nothing has been measured yet for end-to-end upload speed or the mobile-to-desktop connection.
 

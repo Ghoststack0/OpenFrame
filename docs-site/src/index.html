@@ -28,11 +28,11 @@
       <table>
         <thead><tr><th>Goal</th><th>Status</th><th>What exists today</th></tr></thead>
         <tbody>
-          <tr><td>Faster uploads</td><td><span class="badge">Not measured</span></td><td>The web upload panel now shows overall progress (see below). Upload speed itself hasn't changed or been measured end to end.</td></tr>
+          <tr><td>Faster uploads</td><td><span class="badge warn">Partly measured</span></td><td>Controlled API-only upload completion is 8.75% lower in paired measurements. Default-worker performance remains inconclusive. See the <a href="http-comparison.html">HTTP comparison</a>.</td></tr>
           <tr><td>Better mobile-to-desktop connection</td><td><span class="badge">Not started</span></td><td>Nothing yet.</td></tr>
           <tr><td>Redesigned UI</td><td><span class="badge warn">In progress</span></td><td>OpenFrame identity on web: logo, favicons, loading screen, page titles and app name.</td></tr>
           <tr><td>Better UX</td><td><span class="badge warn">In progress</span></td><td>Size-weighted upload progress with bytes processed and combined speed.</td></tr>
-          <tr><td>Outperform current upstream without regressions</td><td><span class="badge warn">Partly measured</span></td><td>Three server changes measured against the fork's base commit. Upload-preflight CPU work is also measured against Immich v3.3.5. Full HTTP upload comparisons are still in progress.</td></tr>
+          <tr><td>Outperform current upstream without regressions</td><td><span class="badge warn">Partly measured</span></td><td>Three server changes measured against the fork's base commit. Upload-preflight CPU work is also measured against Immich v3.3.5. Controlled HTTP upload completion is measured separately; default-worker performance remains inconclusive.</td></tr>
         </tbody>
       </table>
 
@@ -47,7 +47,7 @@
         <tbody>
           <tr><td><code>LIMIT 1</code> on the random-face query, async bcrypt checks, one fewer <code>fs.access</code> per media request</td><td>Server</td><td>Focused benchmarks against base <code>256eb55</code>. See <a href="performance.html">Server performance</a>.</td></tr>
           <tr><td>OpenFrame branding</td><td>Web</td><td>Visual only. Identifiers that clients and existing installs rely on keep their <code>immich</code> names.</td></tr>
-          <tr><td>Overall upload progress: one size-weighted bar with bytes processed and combined speed, and a progress ring on the minimized upload button</td><td>Web</td><td>Unit tests for the progress maths. Uploads are no faster. You can just see how far along they are, and the bar doesn't jump back when finished files are cleared.</td></tr>
+          <tr><td>Overall upload progress: one size-weighted bar with bytes processed and combined speed, and a progress ring on the minimized upload button</td><td>Web</td><td>Unit tests for the progress maths. The progress UI itself does not make uploads faster. You can see how far along they are, and the bar doesn't jump back when finished files are cleared.</td></tr>
         </tbody>
       </table>
 
@@ -59,7 +59,7 @@
       </div>
       <div class="callout warn">
         <p class="cap">Not end to end</p>
-        <p>No result here measures a full upload from a phone or browser, network transfer, or the app as a whole. A faster method or query doesn't prove a faster app.</p>
+        <p>The HTTP comparison measures authenticated loopback uploads with real database and storage writes. It excludes WAN, TLS and mobile clients. Controlled runs exclude background media processing. No result establishes whole-app performance.</p>
       </div>
 
       <h2>Contribute, with or without AI</h2>

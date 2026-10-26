@@ -19,6 +19,7 @@ window.SITE = {
       items: [
         { title: 'Server performance', href: 'performance.html' },
         { title: 'Latest-release CPU comparison', href: 'release-comparison.html' },
+        { title: 'HTTP upload comparison', href: 'http-comparison.html' },
         { title: 'Methodology', href: 'methodology.html' },
       ],
     },
