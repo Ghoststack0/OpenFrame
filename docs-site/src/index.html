@@ -48,6 +48,8 @@
           <tr><td><code>LIMIT 1</code> on the random-face query, async bcrypt checks, one fewer <code>fs.access</code> per media request</td><td>Server</td><td>Focused benchmarks against base <code>256eb55</code>. See <a href="performance.html">Server performance</a>.</td></tr>
           <tr><td>OpenFrame branding</td><td>Web</td><td>Visual only. Identifiers that clients and existing installs rely on keep their <code>immich</code> names.</td></tr>
           <tr><td>Overall upload progress: one size-weighted bar with bytes processed and combined speed, and a progress ring on the minimized upload button</td><td>Web</td><td>Unit tests for the progress maths. The progress UI itself does not make uploads faster. You can see how far along they are, and the bar doesn't jump back when finished files are cleared.</td></tr>
+          <tr><td>OpenFrame app names, in-app mark, launcher and splash assets</td><td>Android / iOS</td><td>Asset dimensions and resource references checked. Full native builds have not been run.</td></tr>
+          <tr><td><code>openframe</code> CLI command, with <code>immich</code> retained</td><td>CLI</td><td>Production build, type-check, lint, formatting and 45 tests pass on Node 24.</td></tr>
         </tbody>
       </table>
 
